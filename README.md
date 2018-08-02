@@ -14,6 +14,8 @@ The code has been designed to support python 3.6+ only. The project has the foll
 - tensorflow - 1.9.0+
 - tensorboard - 1.9.0+
 - numpy - 1.14.5+
+- scipy - 1.1+
+- pandas - 0.22+
 
 
 
