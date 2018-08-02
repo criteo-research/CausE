@@ -1,0 +1,10 @@
+*.dat
+*.data
+.DS_Store
+*.pyc
+*.csv
+*.emb
+*.txt
+*.png
+*.sh
+*.out
