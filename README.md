@@ -6,6 +6,7 @@ Python code for the RecSys 2018 paper entitled 'Causal Embeddings for Recommenda
 ## Code Organisation
 The code is organized as follows:
 - **models.py** - SupervisedProd2Vec and CausalProd2Vec as tensorflow model classes.
+- **dataset_loading.py** - File to load Movelens/Netflix datasets and convert to user/product matrix.
 
 ## Dependencies and Requirements
 The code has been designed to support python 3.6+ only. The project has the following dependences and version requirements:
