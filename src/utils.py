@@ -136,3 +136,52 @@ def compute_bootstraps_2i(sess, model, test_user_batch, test_product_batch, test
     print("LLH STD (%) = ", np.round(np.std(llh_diff)*100, decimals=2))
 
     print("Mean AUC Score On The Bootstrap = ",  np.round(np.mean(auc_list), decimals=4), "+/-", np.round(np.std(auc_list), decimals=4))
+
+def compute_bootstraps(sess, model, test_user_batch, test_product_batch, test_label_batch, test_logits, ap_mse_loss, ap_log_loss):
+    """Compute the bootstraps for the 0 indexed model"""
+
+    data_set_size = len(test_user_batch)
+    mse = []
+    llh = []
+    ap_mse = []
+    ap_llh = []
+    auc_list = []
+    mse_diff = []
+    llh_diff = []
+
+    # Compute the bootstrap values for the test split - this compute the empirical CR as well for comparision
+    for i in range(30):
+
+        ids = generate_bootstrap_batch(i*2, data_set_size)
+        test_user_batch = np.asarray(test_user_batch)
+        test_product_batch = np.asarray(test_product_batch)
+        test_label_batch = np.asarray(test_label_batch)
+
+        # Construct the feed-dict for the model and the average predictor
+        feed_dict = {model.user_list_placeholder : test_user_batch[ids], model.product_list_placeholder: test_product_batch[ids], model.label_list_placeholder: test_label_batch[ids], model.logits_placeholder: test_logits[ids]}
+
+        # Run the model test step updating the AUC object
+        loss_val, mse_loss_val, log_loss_val, pred = sess.run([model.loss, model.mse_loss, model.log_loss, model.prediction], feed_dict=feed_dict)
+
+        # Run the Average Predictor graph
+        ap_mse_val, ap_log_val = sess.run([ap_mse_loss, ap_log_loss], feed_dict=feed_dict)
+
+        mse.append(mse_loss_val)
+        llh.append(log_loss_val)
+        ap_mse.append(ap_mse_val)
+        ap_llh.append(ap_log_val)
+        auc_list.append(metrics.roc_auc_score(y_true=test_label_batch[ids].astype(int), y_score=pred))
+
+
+    for i in range(30):
+        mse_diff.append((ap_mse[i]-mse[i]) / ap_mse[i])
+        llh_diff.append((ap_llh[i]-llh[i]) / ap_llh[i])
+
+    print("MSE Mean Score On The Bootstrap = ", np.mean(mse))
+    print("MSE Mean Lift Over Average Predictor (%) = ", np.round(np.mean(mse_diff)*100, decimals=2))
+    print("MSE STD (%) =" , np.round(np.std(mse_diff)*100, decimals=2))
+
+    print("LLH Mean Over Average Predictor (%) =", np.round(np.mean(llh_diff)*100, decimals=2))
+    print("LLH STD (%) = ", np.round(np.std(llh_diff)*100, decimals=2))
+
+    print("Mean AUC Score On The Bootstrap = ",  np.round(np.mean(auc_list), decimals=4), "+/-", np.round(np.std(auc_list), decimals=4))
