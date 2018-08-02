@@ -14,7 +14,7 @@ The code has been designed to support python 3.6+ only. The project has the foll
 - python3 - 3.6.5+
 - tensorflow - 1.9.0+
 - tensorboard - 1.9.0+
-- numpy - 1.14.5
+- numpy - 1.14.5+
 
 
 
