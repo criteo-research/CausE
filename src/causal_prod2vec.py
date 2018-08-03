@@ -61,11 +61,8 @@ with graph.as_default():
         test_logits = np.empty(len(test_label_batch))
         test_logits.fill(test_cr)
 
-# Control the amount of memory used by the GPU
-gpu_options = tf.GPUOptions()
-
 # Launch the Session
-with tf.Session(graph=graph, config=tf.ConfigProto(allow_soft_placement=True, log_device_placement=False, gpu_options=gpu_options)) as sess:
+with tf.Session(graph=graph, config=tf.ConfigProto(allow_soft_placement=True, log_device_placement=False)) as sess:
 
     # initialise all the TF variables
     init_op = tf.global_variables_initializer()
@@ -169,10 +166,6 @@ with tf.Session(graph=graph, config=tf.ConfigProto(allow_soft_placement=True, lo
     feed_dict = {model.user_list_placeholder : test_user_batch, model.product_list_placeholder: test_product_batch, model.label_list_placeholder: test_label_batch}
     loss_val, mse_loss_val, log_loss_val = sess.run([model.loss, model.mse_loss, model.log_loss], feed_dict=feed_dict)
     print("Test loss (CE, MSE, NLL) = ", loss_val, ": ", mse_loss_val , ": ",log_loss_val)
-
-    # Calculate the final embeddings and save to disk
-    final_embeddings = model.product_embeddings.eval()
-    np.savetxt('final_embeddings.emb', final_embeddings)
 
     # Run the bootstrap for this model ---------------------------------------------------------------------------------------------------------------
     print("Begin Bootstrap process...")
