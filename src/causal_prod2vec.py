@@ -18,6 +18,7 @@ FLAGS = flags.FLAGS
 flags.DEFINE_string('data_set', 'user_prod_dict.skew.', 'Dataset string.')  # Reg Skew
 flags.DEFINE_string('adapt_stat', 'adapt_0', 'Adapt String.')  # Adaptation strategy
 flags.DEFINE_string('model_name', 'cp2v', 'Name of the model for saving.')
+flags.DEFINE_string('logging_dir', '/tmp/tensorboard', 'Name of the model for saving.')
 flags.DEFINE_float('learning_rate', 1.0, 'Initial learning rate.')
 flags.DEFINE_integer('num_epochs', 1, 'Number of epochs to train.')
 flags.DEFINE_integer('num_steps', 500, 'Number of steps after which to test.')
@@ -49,7 +50,7 @@ with graph.as_default():
     with tf.device('/cpu:0'):
         
         # Create the model object
-        model = mo.CausalProd2Vec(num_users, num_products+1, FLAGS.embedding_size, FLAGS.l2_pen, FLAGS.learning_rate, FLAGS.cf_pen, cf_distance=FLAGS.cf_distance)
+        model = mo.CausalProd2Vec(num_users, num_products, FLAGS.embedding_size, FLAGS.l2_pen, FLAGS.learning_rate, FLAGS.cf_pen, cf_distance=FLAGS.cf_distance)
 
         # Get train data batch from queue
         next_batch = ut.load_train_dataset(train_data_set_location, FLAGS.batch_size, FLAGS.num_epochs)
@@ -148,7 +149,7 @@ with tf.Session(graph=graph, config=tf.ConfigProto(allow_soft_placement=True, lo
                 # If condition for the early stopping condition
                 if FLAGS.early_stopping_enabled and step > FLAGS.early_stopping and cost_val[-1] > np.mean(cost_val[-(FLAGS.early_stopping+1):-1]):
                     print("Early stopping...")
-                    saver.save(sess, os.path.join('/tmp/tensorboard', model_name), model.global_step) # Save model
+                    saver.save(sess, os.path.join(FLAGS.logging_dir, model_name), model.global_step) # Save model
                     break
 
     except tf.errors.OutOfRangeError:
@@ -156,7 +157,7 @@ with tf.Session(graph=graph, config=tf.ConfigProto(allow_soft_placement=True, lo
 
     finally:
         with tf.device('/cpu:0'):
-            saver.save(sess, os.path.join('/tmp/tensorboard', model_name), model.global_step) # Save model
+            saver.save(sess, os.path.join(FLAGS.logging_dir, model_name), model.global_step) # Save model
 
     train_writer.close()
     print("Training Complete")
