@@ -18,7 +18,25 @@ The code has been designed to support python 3.6+ only. The project has the foll
 - scipy - 1.1+
 - pandas - 0.22+
 
+## Datasets and Pre-processing
 
+We make use of the MovieLens100K and 10M datasets to present results for our paper. Both datasets can be downloaded from here - https://grouplens.org/datasets/movielens/
+
+Both MovieLens datasets can then be converted into a format compatible for our approach using the gen_dataset.py script. 
+
+## Training a Model
+
+
+
+### Optional arguments
+
+The code uses TF flags to manage the command line arguments for running the models, please note that both models have the same parameters.
+
+> Causal Embeddings for Recommendation Parameters 
+>
+>optional arguments: <br />
+> --data_set : The dataset to load <br />
+>  --model_name The name of the model used when saving (default: cp2v) <br />
 
 ## License
 
