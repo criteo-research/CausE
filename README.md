@@ -26,7 +26,7 @@ Both MovieLens datasets can then be converted into a format compatible for our a
 
 ## Training a Model
 
-
+The models can be training simply by running **python3 causal_prod2vec.py** or **python3 causal_prod2vec2i.py** from the src directory. 
 
 ### Optional arguments
 
@@ -36,7 +36,18 @@ The code uses TF flags to manage the command line arguments for running the mode
 >
 >optional arguments: <br />
 > --data_set : The dataset to load <br />
->  --model_name The name of the model used when saving (default: cp2v) <br />
+>  --model_name : The name of the model used when saving (default: cp2v) <br />
+>  --logging_dir : Where to save tensorboard data (default: /tmp/tensorboard/) <br />
+>  --learning_rate : The learning rate for SGD (default: 1.0) <br />
+>  --l2_pen : The weight decay regularization amount (default: 0.0) <br />
+>  --num_epochs : The number of epochs to train for (default: 10) <br />
+>  --batch_size : The batch size for SGD (default: 512) <br />
+>  --num_steps : The number of batches after which to print information (default: 500) <br />
+>  --early_stopping_enabled : If to use early stopping (default: False) <br />
+>  --early_stopping : 'Tolerance for early stopping (# of epochs).' (default: 200) <br />
+>  --embedding_size : The embeddings dimension of the product and user embeddings (default: 50) <br />
+>  --cf_pen : The weighting for the counter-factual regularization (default: 1.0) <br />
+>  --cf_distance : Which distance metric to use for the counter-factual regularization (default: l1) <br />
 
 ## License
 

@@ -20,15 +20,15 @@ flags.DEFINE_string('adapt_stat', 'adapt_0', 'Adapt String.')  # Adaptation stra
 flags.DEFINE_string('model_name', 'cp2v', 'Name of the model for saving.')
 flags.DEFINE_string('logging_dir', '/tmp/tensorboard', 'Name of the model for saving.')
 flags.DEFINE_float('learning_rate', 1.0, 'Initial learning rate.')
-flags.DEFINE_integer('num_epochs', 1, 'Number of epochs to train.')
-flags.DEFINE_integer('num_steps', 500, 'Number of steps after which to test.')
-flags.DEFINE_integer('embedding_size', 50, 'Size of each embedding vector.')
-flags.DEFINE_integer('batch_size', 512, 'How big is a batch of training.')
-flags.DEFINE_float('cf_pen', 1.0, 'Imbalance loss.')
 flags.DEFINE_float('l2_pen', 0.0, 'L2 learning rate penalty.')
-flags.DEFINE_string('cf_distance', 'l1', 'Use L1 or L2 for the loss .')
+flags.DEFINE_integer('num_epochs', 1, 'Number of epochs to train.')
+flags.DEFINE_integer('batch_size', 512, 'How big is a batch of training.')
+flags.DEFINE_integer('num_steps', 500, 'Number of steps after which to test.')
 flags.DEFINE_bool('early_stopping_enabled', False, 'Enable early stopping.')
 flags.DEFINE_integer('early_stopping', 200, 'Tolerance for early stopping (# of epochs).')
+flags.DEFINE_integer('embedding_size', 50, 'Size of each embedding vector.')
+flags.DEFINE_float('cf_pen', 1.0, 'Imbalance loss.')
+flags.DEFINE_string('cf_distance', 'l1', 'Use L1 or L2 for the loss .')
 
 train_data_set_location = "./Data/" + FLAGS.data_set +  "train." + FLAGS.adapt_stat + ".csv" # Location of train dataset
 test_data_set_location = "./Data/" + FLAGS.data_set +  "test." + FLAGS.adapt_stat + ".csv" # Location of the test dataset
