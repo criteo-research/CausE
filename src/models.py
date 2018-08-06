@@ -3,21 +3,25 @@ from __future__ import print_function
 
 import tensorflow as tf
 
-tf.set_random_seed(42)
-
 class SupervisedProd2vec():
-    def __init__(self, num_users, num_products, embedding_dim, l2_pen, learning_rate, plot_gradients=False):
+    def __init__(self, FLAGS):
+        super().__init__()
 
-        self.num_users = num_users
-        self.num_products = num_products
-        self.embedding_dim = embedding_dim
-        self.l2_pen = l2_pen
-        self.learning_rate = learning_rate
-        self.plot_gradients = plot_gradients
+        self.num_users = FLAGS.num_users
+        self.num_products = FLAGS.num_products
+        self.embedding_dim = FLAGS.embedding_size
+        self.l2_pen = FLAGS.l2_pen
+        self.learning_rate = FLAGS.learning_rate
+        self.plot_gradients = FLAGS.plot_gradients
+        self.cf_pen = FLAGS.cf_pen
+        self.cf_distance = FLAGS.cf_distance
+        self.cf_loss = 0
 
         # Build the graph
         self.create_placeholders()
         self.build_graph()
+        self.create_control_embeddings()
+        self.create_counter_factual_loss()
         self.create_losses()
         self.add_optimizer()
         self.add_average_predictor()
@@ -29,6 +33,7 @@ class SupervisedProd2vec():
         self.user_list_placeholder = tf.placeholder(tf.int32, [None], name="user_list_placeholder")
         self.product_list_placeholder = tf.placeholder(tf.int32, [None], name="product_list_placeholder")
         self.label_list_placeholder = tf.placeholder(tf.float32, [None, 1], name="label_list_placeholder")
+        self.reg_list_placeholder = tf.placeholder(tf.int32, [None], name="reg_list_placeholder")
 
         # logits placeholder used to store the test CR for the bootstrapping process
         self.logits_placeholder = tf.placeholder(tf.float32, [None], name="logits_placeholder")
@@ -59,6 +64,16 @@ class SupervisedProd2vec():
 
             self.prediction = tf.sigmoid(self.logits, name='sigmoid_prediction')
 
+    def create_control_embeddings(self):
+        """Create the control embeddings"""
+
+        pass
+
+    def create_counter_factual_loss(self):
+        """Create the counter factual loss to add to main loss"""
+
+        pass
+
     def create_losses(self):
         """Create the losses"""
 
@@ -66,11 +81,13 @@ class SupervisedProd2vec():
             # Sigmoid loss between the logits and labels
             self.log_loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=self.logits, labels=self.label_list_placeholder))
 
-            #Adding the regularizer term on user vct and prod vct and their bias terms
+            # Adding the regularizer term on user vct and prod vct and their bias terms
             reg_term = self.l2_pen * ( tf.nn.l2_loss(self.user_embeddings) + tf.nn.l2_loss(self.product_embeddings) )
             reg_term_biases = self.l2_pen * ( tf.nn.l2_loss(self.prod_b) + tf.nn.l2_loss(self.user_b) )
-            self.loss = self.log_loss + reg_term + reg_term_biases
+            self.factual_loss = self.log_loss + reg_term + reg_term_biases
 
+            # Adding the counter-factual loss
+            self.loss = self.factual_loss + (self.cf_pen * self.cf_loss) # Imbalance loss
             self.mse_loss = tf.losses.mean_squared_error(labels=self.label_list_placeholder, predictions=self.prediction)
 
     def add_optimizer(self):
@@ -84,10 +101,10 @@ class SupervisedProd2vec():
             if self.plot_gradients:
                 optimizer = tf.train.GradientDescentOptimizer(self.learning_rate)
                 # Op to calculate every variable gradient
-                self.grads = tf.gradients(self.loss, tf.trainable_variables())
-                self.grads = list(zip(self.grads, tf.trainable_variables()))
+                grads = tf.gradients(self.loss, tf.trainable_variables())
+                grads = list(zip(grads, tf.trainable_variables()))
                 # Op to update all variables according to their gradient
-                self.apply_grads = optimizer.apply_gradients(grads_and_vars=self.grads)
+                self.apply_grads = optimizer.apply_gradients(grads_and_vars=grads)
             else:
                 self.apply_grads = tf.train.GradientDescentOptimizer(self.learning_rate).minimize(self.loss, global_step=self.global_step)
 
@@ -122,27 +139,10 @@ class SupervisedProd2vec():
             tf.summary.scalar('alpha', self.alpha)
 
 class CausalProd2Vec(SupervisedProd2vec):
-    def __init__(self, num_users, num_products, embedding_dim, l2_pen, learning_rate, cf_pen, plot_gradients=False, cf_distance='l1'):
+    def __init__(self, FLAGS):
 
-        self.num_users = num_users
-        self.num_products = num_products
-        self.embedding_dim = embedding_dim
-        self.l2_pen = l2_pen
-        self.learning_rate = learning_rate
-        self.plot_gradients = plot_gradients
-        self.cf_pen = cf_pen
-        self.cf_distance = cf_distance
-
-        # Build the graph
-        self.create_placeholders()
-        self.build_graph()
-        self.create_control_embeddings()
-        self.create_counter_factual_loss()
-        self.create_losses()
-        self.add_optimizer()
-        self.add_average_predictor()
-        self.add_summaries()
-
+        super().__init__(FLAGS)
+        
     def create_control_embeddings(self):
         """Create the control embeddings"""
 
@@ -167,54 +167,10 @@ class CausalProd2Vec(SupervisedProd2vec):
                 print("Using Cosine difference between treatment and control embeddings")
                 self.cf_loss = tf.losses.cosine_distance(tf.nn.l2_normalize(self.control_embed,axis=0), tf.nn.l2_normalize(self.product_embed,axis=1), axis=0)
 
-    def create_losses(self):
-        """Create the losses"""
-
-        with tf.name_scope('losses'):
-            # Sigmoid loss between the logits and labels
-            self.log_loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=self.logits, labels=self.label_list_placeholder))
-
-            # Adding the regularizer term on user vct and prod vct and their bias terms
-            reg_term = self.l2_pen * ( tf.nn.l2_loss(self.user_embeddings) + tf.nn.l2_loss(self.product_embeddings) )
-            reg_term_biases = self.l2_pen * ( tf.nn.l2_loss(self.prod_b) + tf.nn.l2_loss(self.user_b) )
-            self.factual_loss = self.log_loss + reg_term + reg_term_biases
-
-            # Adding the counter-factual loss
-            self.loss = self.factual_loss + (self.cf_pen * self.cf_loss) # Imbalance loss
-            self.mse_loss = tf.losses.mean_squared_error(labels=self.label_list_placeholder, predictions=self.prediction)
-
 class CausalProd2Vec2i(SupervisedProd2vec):
-    def __init__(self, num_users, num_products, embedding_dim, l2_pen, learning_rate, cf_pen, plot_gradients=False, cf_distance='l1'):
+    def __init__(self, FLAGS):
 
-        self.num_users = num_users
-        self.num_products = num_products * 2 # Doubled to accommodate the treatment embeddings 
-        self.embedding_dim = embedding_dim
-        self.l2_pen = l2_pen
-        self.learning_rate = learning_rate
-        self.plot_gradients = plot_gradients
-        self.cf_pen = cf_pen
-        self.cf_distance = cf_distance
-
-        # Build the graph
-        self.create_placeholders()
-        self.build_graph()
-        self.create_control_embeddings()
-        self.create_counter_factual_loss()
-        self.create_losses()
-        self.add_optimizer()
-        self.add_average_predictor()
-        self.add_summaries()
-
-    def create_placeholders(self):
-        """Create the placeholders to be used """
-        
-        self.user_list_placeholder = tf.placeholder(tf.int32, [None], name="user_list_placeholder")
-        self.product_list_placeholder = tf.placeholder(tf.int32, [None], name="product_list_placeholder")
-        self.label_list_placeholder = tf.placeholder(tf.float32, [None, 1], name="label_list_placeholder")
-        self.reg_list_placeholder = tf.placeholder(tf.int32, [None], name="reg_list_placeholder")
-
-        # logits placeholder used to store the test CR for the bootstrapping process
-        self.logits_placeholder = tf.placeholder(tf.float32, [None], name="logits_placeholder")
+        super().__init__(FLAGS)
 
     def create_control_embeddings(self):
         """Create the control embeddings"""
@@ -223,7 +179,6 @@ class CausalProd2Vec2i(SupervisedProd2vec):
             # Get the treatment representations for the products
             self.control_embed = tf.stop_gradient(tf.nn.embedding_lookup(self.product_embeddings, self.reg_list_placeholder))
             
-    
     def create_counter_factual_loss(self):
         """Create the counter factual loss to add to main loss"""
         
@@ -240,19 +195,3 @@ class CausalProd2Vec2i(SupervisedProd2vec):
             elif self.cf_distance == "cos":
                 print("Using Cosine difference between treatment and control embeddings")
                 self.cf_loss = tf.losses.cosine_distance(tf.nn.l2_normalize(self.control_embed,axis=0), tf.nn.l2_normalize(self.product_embed,axis=1), axis=0)
-
-    def create_losses(self):
-        """Create the losses"""
-
-        with tf.name_scope('losses'):
-            # Sigmoid loss between the logits and labels
-            self.log_loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=self.logits, labels=self.label_list_placeholder))
-
-            # Adding the regularizer term on user vct and prod vct and their bias terms
-            reg_term = self.l2_pen * ( tf.nn.l2_loss(self.user_embeddings) + tf.nn.l2_loss(self.product_embeddings) )
-            reg_term_biases = self.l2_pen * ( tf.nn.l2_loss(self.prod_b) + tf.nn.l2_loss(self.user_b) )
-            self.factual_loss = self.log_loss + reg_term + reg_term_biases
-
-            # Adding the counter-factual loss
-            self.loss = self.factual_loss + (self.cf_pen * self.cf_loss) # Imbalance loss
-            self.mse_loss = tf.losses.mean_squared_error(labels=self.label_list_placeholder, predictions=self.prediction)

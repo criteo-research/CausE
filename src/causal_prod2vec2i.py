@@ -7,16 +7,16 @@ import os
 import tensorflow as tf
 import numpy as np
 import utils as ut
-import models as mo
+from models import CausalProd2Vec2i
 from tensorflow.contrib.tensorboard.plugins import projector
-
-tf.set_random_seed(42)
 
 # Hyper-Parameters
 flags = tf.app.flags
 FLAGS = flags.FLAGS
-flags.DEFINE_string('data_set', 'user_prod_dict.skew.', 'Dataset string.')  # Reg Skew
-flags.DEFINE_string('adapt_stat', 'adapt_2i', 'Adapt String.')  # Adaptation strategy
+flags.DEFINE_string('data_set', 'user_prod_dict.skew.', 'Dataset string.')
+flags.DEFINE_integer('num_products', 1683, 'How many products in the dataset.')
+flags.DEFINE_integer('num_users', 944, 'How many users in the dataset.')
+flags.DEFINE_string('adapt_stat', 'adapt_2i', 'Adapt String.')
 flags.DEFINE_string('model_name', 'cp2v', 'Name of the model for saving.')
 flags.DEFINE_string('logging_dir', '/tmp/tensorboard', 'Name of the model for saving.')
 flags.DEFINE_float('learning_rate', 1.0, 'Initial learning rate.')
@@ -25,7 +25,9 @@ flags.DEFINE_integer('num_epochs', 1, 'Number of epochs to train.')
 flags.DEFINE_integer('batch_size', 512, 'How big is a batch of training.')
 flags.DEFINE_integer('num_steps', 500, 'Number of steps after which to test.')
 flags.DEFINE_bool('early_stopping_enabled', False, 'Enable early stopping.')
+flags.DEFINE_bool('plot_gradients', False, 'Plot the gradients in Tensorboard.')
 flags.DEFINE_integer('early_stopping', 200, 'Tolerance for early stopping (# of epochs).')
+flags.DEFINE_integer('seed', 123, 'Set for reproducibility.')
 flags.DEFINE_integer('embedding_size', 50, 'Size of each embedding vector.')
 flags.DEFINE_float('cf_pen', 1.0, 'Imbalance loss.')
 flags.DEFINE_string('cf_distance', 'l1', 'Use L1 or L2 for the loss .')
@@ -36,21 +38,19 @@ validation_test_set_location = "./Data/" + FLAGS.data_set +  "valid_test." + FLA
 validation_train_set_location = "./Data/" + FLAGS.data_set +  "valid_train." + FLAGS.adapt_stat + ".csv" #Location of the validation dataset
 
 model_name = FLAGS.model_name + ".ckpt"
-plot_gradients = False # Plot the gradients
 cost_val = []
-
-# Number of users and products in dataset
-num_products = 1683
-num_users = 944
+FLAGS.num_products = FLAGS.num_products*2
 
 # Create graph object
 graph = tf.Graph()
 with graph.as_default():
 
     with tf.device('/cpu:0'):
+
+        tf.set_random_seed(FLAGS.seed)
         
         # Load the model
-        model = mo.CausalProd2Vec2i(num_users, num_products, FLAGS.embedding_size, FLAGS.l2_pen, FLAGS.learning_rate, FLAGS.cf_pen, cf_distance=FLAGS.cf_distance)
+        model = CausalProd2Vec2i(FLAGS)
 
         # Get train data batch from queue
         next_batch = ut.load_train_dataset(train_data_set_location, FLAGS.batch_size, FLAGS.num_epochs)
@@ -70,7 +70,7 @@ with tf.Session(graph=graph, config=tf.ConfigProto(allow_soft_placement=True, lo
     sess.run(init_op)
 
     # Plot the gradients if required.
-    if plot_gradients:
+    if FLAGS.plot_gradients:
         # Create summaries to visualize weights
         for var in tf.trainable_variables():
             tf.summary.histogram(var.name, var)
@@ -112,7 +112,7 @@ with tf.Session(graph=graph, config=tf.ConfigProto(allow_soft_placement=True, lo
                 # Construct the feed_dict
                 user_batch, product_batch, label_batch = sess.run(next_batch)
                 # Treatment is the small set of samples from St, Control is the larger set of samples from Sc
-                reg_ids = ut.compute_2i_regularization_id(product_batch, num_products) # Compute the product ID's for regularization
+                reg_ids = ut.compute_2i_regularization_id(product_batch, (FLAGS.num_products/2)) # Compute the product ID's for regularization
                 feed_dict = {model.user_list_placeholder : user_batch, model.product_list_placeholder: product_batch, model.reg_list_placeholder: reg_ids, model.label_list_placeholder: label_batch}
             
                 # Run the graph
@@ -140,8 +140,8 @@ with tf.Session(graph=graph, config=tf.ConfigProto(allow_soft_placement=True, lo
                 val_train_product_batch = np.asarray(val_train_product_batch, dtype=np.float32)
                 val_test_product_batch = np.asarray(val_test_product_batch, dtype=np.float32)
 
-                vaL_train_reg_ids = ut.compute_2i_regularization_id(val_train_product_batch, num_products) # Compute the product ID's for regularization
-                vaL_test_reg_ids = ut.compute_2i_regularization_id(val_test_product_batch, num_products) # Compute the product ID's for regularization
+                vaL_train_reg_ids = ut.compute_2i_regularization_id(val_train_product_batch, (FLAGS.num_products/2)) # Compute the product ID's for regularization
+                vaL_test_reg_ids = ut.compute_2i_regularization_id(val_test_product_batch, (FLAGS.num_products/2)) # Compute the product ID's for regularization
 
                 feed_dict_test = {model.user_list_placeholder : val_test_user_batch, model.product_list_placeholder: val_test_product_batch, model.reg_list_placeholder: vaL_test_reg_ids,  model.label_list_placeholder: val_test_label_batch}
                 feed_dict_train = {model.user_list_placeholder : val_train_user_batch, model.product_list_placeholder: val_train_product_batch, model.reg_list_placeholder: vaL_train_reg_ids, model.label_list_placeholder: val_train_label_batch}
@@ -190,5 +190,5 @@ with tf.Session(graph=graph, config=tf.ConfigProto(allow_soft_placement=True, lo
     ut.compute_bootstraps_2i(sess, model, test_user_batch, test_product_batch, test_label_batch, test_logits, model.ap_mse_loss, model.ap_log_loss)
 
     print("Running BootStrap On The Treatment Representations")
-    test_product_batch = [int(x) + num_products for x in test_product_batch]
+    test_product_batch = [int(x) + (FLAGS.num_products/2) for x in test_product_batch]
     ut.compute_bootstraps_2i(sess, model, test_user_batch, test_product_batch, test_label_batch, test_logits, model.ap_mse_loss, model.ap_log_loss)

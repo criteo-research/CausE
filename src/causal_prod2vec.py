@@ -7,16 +7,16 @@ import os
 import tensorflow as tf
 import numpy as np
 import utils as ut
-import models as mo
+from models import CausalProd2Vec
 from tensorflow.contrib.tensorboard.plugins import projector
-
-tf.set_random_seed(42)
 
 # Hyper-Parameters
 flags = tf.app.flags
 FLAGS = flags.FLAGS
-flags.DEFINE_string('data_set', 'user_prod_dict.skew.', 'Dataset string.')  # Reg Skew
-flags.DEFINE_string('adapt_stat', 'adapt_0', 'Adapt String.')  # Adaptation strategy
+flags.DEFINE_string('data_set', 'user_prod_dict.skew.', 'Dataset string.')
+flags.DEFINE_integer('num_products', 1683, 'How many products in the dataset.')
+flags.DEFINE_integer('num_users', 944, 'How many users in the dataset.')
+flags.DEFINE_string('adapt_stat', 'adapt_0', 'Adapt String.')
 flags.DEFINE_string('model_name', 'cp2v', 'Name of the model for saving.')
 flags.DEFINE_string('logging_dir', '/tmp/tensorboard', 'Name of the model for saving.')
 flags.DEFINE_float('learning_rate', 1.0, 'Initial learning rate.')
@@ -25,7 +25,9 @@ flags.DEFINE_integer('num_epochs', 1, 'Number of epochs to train.')
 flags.DEFINE_integer('batch_size', 512, 'How big is a batch of training.')
 flags.DEFINE_integer('num_steps', 500, 'Number of steps after which to test.')
 flags.DEFINE_bool('early_stopping_enabled', False, 'Enable early stopping.')
+flags.DEFINE_bool('plot_gradients', False, 'Plot the gradients in Tensorboard.')
 flags.DEFINE_integer('early_stopping', 200, 'Tolerance for early stopping (# of epochs).')
+flags.DEFINE_integer('seed', 123, 'Set for reproducibility.')
 flags.DEFINE_integer('embedding_size', 50, 'Size of each embedding vector.')
 flags.DEFINE_float('cf_pen', 1.0, 'Imbalance loss.')
 flags.DEFINE_string('cf_distance', 'l1', 'Use L1 or L2 for the loss .')
@@ -36,21 +38,18 @@ validation_test_set_location = "./Data/" + FLAGS.data_set +  "valid_test." + FLA
 validation_train_set_location = "./Data/" + FLAGS.data_set +  "valid_train." + FLAGS.adapt_stat + ".csv" #Location of the validation dataset
 
 model_name = FLAGS.model_name + ".ckpt"
-plot_gradients = False # Plot the gradients
 cost_val = []
-
-# Number of users and products in dataset
-num_products = 1683
-num_users = 944
 
 # Create graph object
 graph = tf.Graph()
 with graph.as_default():
 
     with tf.device('/cpu:0'):
+
+        tf.set_random_seed(FLAGS.seed)
         
         # Create the model object
-        model = mo.CausalProd2Vec(num_users, num_products, FLAGS.embedding_size, FLAGS.l2_pen, FLAGS.learning_rate, FLAGS.cf_pen, cf_distance=FLAGS.cf_distance)
+        model = CausalProd2Vec(FLAGS)
 
         # Get train data batch from queue
         next_batch = ut.load_train_dataset(train_data_set_location, FLAGS.batch_size, FLAGS.num_epochs)
@@ -70,7 +69,7 @@ with tf.Session(graph=graph, config=tf.ConfigProto(allow_soft_placement=True, lo
     sess.run(init_op)
 
     # Plot the gradients if required.
-    if plot_gradients:
+    if FLAGS.plot_gradients:
         # Create summaries to visualize weights
         for var in tf.trainable_variables():
             tf.summary.histogram(var.name, var)
@@ -113,7 +112,7 @@ with tf.Session(graph=graph, config=tf.ConfigProto(allow_soft_placement=True, lo
 
                 # Run the graph
                 _, sum_str, loss_val, mse_loss_val, log_loss_val = sess.run([model.apply_grads, merged, model.loss, model.mse_loss, model.log_loss], feed_dict=feed_dict)
-
+                
             step +=1
             average_loss += loss_val
             average_mse_loss += mse_loss_val
@@ -143,7 +142,7 @@ with tf.Session(graph=graph, config=tf.ConfigProto(allow_soft_placement=True, lo
                 sum_str, loss_val, mse_loss_val, log_loss_val = sess.run([merged, model.loss, model.mse_loss, model.log_loss], feed_dict=feed_dict_train)
                 print("Validation loss on S_c (FULL, MSE, NLL) at step ", step, ": ", loss_val, ": ", mse_loss_val, ": ", log_loss_val)
                 print("####################################################################################################################")   
-
+                
                 test_writer.add_summary(sum_str, step) # Write the summary
 
                 # If condition for the early stopping condition
