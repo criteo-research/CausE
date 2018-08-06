@@ -5,8 +5,11 @@ Python code for the RecSys 2018 paper entitled 'Causal Embeddings for Recommenda
 
 ## Code Organisation
 The code is organized as follows:
+- **causal_prod2vec.py** - Used to run the CausE-avg method from the paper, where users response under the uniform exposure is averaged into a single vector.
+- **causal_prod2vec2i.py** - Used to run the CausE-prod-T and CausE-prod-C methods from the paper, where users response under the uniform exposure is mapped into a separate product matrix.
 - **models.py** - SupervisedProd2Vec and CausalProd2Vec as tensorflow model classes.
 - **dataset_loading.py** - File to load Movelens/Netflix datasets and convert to user/product matrix.
+- **utils.py** - Various helper methods.
 
 ## Dependencies and Requirements
 The code has been designed to support python 3.6+ only. The project has the following dependences and version requirements:
@@ -26,7 +29,7 @@ Both MovieLens datasets can then be converted into a format compatible for our a
 
 ## Training a Model
 
-The models can be training simply by running **python3 causal_prod2vec.py** or **python3 causal_prod2vec2i.py** from the src directory. 
+After the data has been downloaded, preprocessed and placed in the Data directory, the models can then be training simply by running **python3 causal_prod2vec.py** or **python3 causal_prod2vec2i.py** from the src directory. The various hyper-parameters of the models can be controlled via arguments detailed below. 
 
 ### Optional arguments
 
@@ -48,6 +51,21 @@ The code uses TF flags to manage the command line arguments for running the mode
 >  --embedding_size : The embeddings dimension of the product and user embeddings (default: 50) <br />
 >  --cf_pen : The weighting for the counter-factual regularization (default: 1.0) <br />
 >  --cf_distance : Which distance metric to use for the counter-factual regularization (default: l1) <br />
+
+
+## Cite
+
+Please cite the associated paper for this work if you use this code:
+
+```
+@article{bonner2017causal,
+  title={Causal Embeddings for Recommendation},
+  author={Bonner, Stephen and Vasile, Flavian},
+  journal={arXiv preprint arXiv:1706.07639},
+  year={2017}
+}
+```
+
 
 ## License
 
