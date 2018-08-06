@@ -8,7 +8,7 @@ The code is organized as follows:
 - **causal_prod2vec.py** - Used to run the CausE-avg method from the paper, where users response under the uniform exposure is averaged into a single vector.
 - **causal_prod2vec2i.py** - Used to run the CausE-prod-T and CausE-prod-C methods from the paper, where users response under the uniform exposure is mapped into a separate product matrix.
 - **models.py** - SupervisedProd2Vec and CausalProd2Vec as tensorflow model classes.
-- **dataset_loading.py** - File to load Movelens/Netflix datasets and convert to user/product matrix.
+- **dataset_loading.py** - File to load Movielens/Netflix datasets and convert to user/product matrix.
 - **utils.py** - Various helper methods.
 
 ## Dependencies and Requirements
