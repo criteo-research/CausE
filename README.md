@@ -52,11 +52,13 @@ The code uses TF flags to manage the command line arguments for running the mode
 Please cite the associated paper for this work if you use this code:
 
 ```
-@article{bonner2017causal,
-  title={Causal Embeddings for Recommendation},
+@inproceedings{bonner2018causal,
+  title={Causal embeddings for recommendation},
   author={Bonner, Stephen and Vasile, Flavian},
-  journal={arXiv preprint arXiv:1706.07639},
-  year={2017}
+  booktitle={Proceedings of the 12th ACM Conference on Recommender Systems},
+  pages={104--112},
+  year={2018},
+  organization={ACM}
 }
 ```
 
