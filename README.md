@@ -21,12 +21,6 @@ The code has been designed to support python 3.6+ only. The project has the foll
 - scipy - 1.1+
 - pandas - 0.22+
 
-## Datasets and Pre-processing
-
-We make use of the MovieLens100K and 10M datasets to present results for our paper. Both datasets can be downloaded from here - https://grouplens.org/datasets/movielens/
-
-Both MovieLens datasets can then be converted into a format compatible for our approach using the gen_dataset.py script. 
-
 ## Training a Model
 
 After the data has been downloaded, preprocessed and placed in the Data directory, the models can then be training simply by running **python3 causal_prod2vec.py** or **python3 causal_prod2vec2i.py** from the src directory. The various hyper-parameters of the models can be controlled via arguments detailed below. 
